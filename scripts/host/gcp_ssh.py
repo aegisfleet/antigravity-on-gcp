@@ -27,6 +27,7 @@ def ssh_command(
         f"--project={project_id}",
         f"--zone={zone}",
         "--tunnel-through-iap",
+        "--strict-host-key-checking=no",
     ]
     if command:
         args.extend(["--command", command])
@@ -62,5 +63,6 @@ def scp_to_vm(
         f"--project={project_id}",
         f"--zone={zone}",
         "--tunnel-through-iap",
+        "--strict-host-key-checking=no",
     ])
     return subprocess.run(args, check=True, text=True, encoding="utf-8")

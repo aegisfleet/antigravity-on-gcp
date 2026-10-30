@@ -123,7 +123,7 @@ def create_instance(
         f"--image-family={image_family}",
         f"--image-project={image_project}",
         "--tags=iap-ssh",
-        "--metadata=enable-oslogin=TRUE",
+        "--metadata=enable-oslogin=FALSE",
     ]
     run_gcloud(cmd, check=True)
     print(f"[OK] Instance '{instance_name}' created successfully.")
