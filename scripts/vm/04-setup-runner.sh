@@ -50,7 +50,8 @@ if ! id "${RUNNER_USER}" &>/dev/null; then
 fi
 
 # 2. Prepare directory
-sudo -u "${RUNNER_USER}" mkdir -p "${RUNNER_DIR}"
+sudo mkdir -p "${RUNNER_DIR}"
+sudo chown -R "${RUNNER_USER}:${RUNNER_USER}" "${RUNNER_DIR}"
 cd "${RUNNER_DIR}"
 
 # 3. Download runner package if not already downloaded

@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # 02-setup-node-agy.sh
-# Install Node.js LTS, Antigravity CLI (agy) fixed version, and configure environment
+# Install Node.js LTS, Antigravity CLI (agy), and configure environment
 # ==============================================================================
 set -euo pipefail
 
 RUNNER_USER="${RUNNER_USER:-runner}"
-AGY_VERSION="${AGY_VERSION:-1.4.10}"
 AGY_CLI_DISABLE_AUTO_UPDATE="${AGY_CLI_DISABLE_AUTO_UPDATE:-true}"
 
 RED='\033[0;31m'
@@ -14,7 +13,7 @@ GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-echo -e "${CYAN}=== [2/6] Installing Node.js & Antigravity CLI (${AGY_VERSION}) ===${NC}"
+echo -e "${CYAN}=== [2/6] Installing Node.js & Antigravity CLI (agy) ===${NC}"
 
 # 1. Create runner dedicated user if not exists
 if ! id "${RUNNER_USER}" &>/dev/null; then
@@ -37,12 +36,20 @@ else
     echo "Node.js is already installed: $(node -v)"
 fi
 
-# 3. Install Antigravity CLI (agy)
-echo "Installing @google/antigravity@${AGY_VERSION} globally..."
-sudo npm install -g "@google/antigravity@${AGY_VERSION}"
+# 3. Install Antigravity CLI (agy) via official installer
+if ! command -v agy &>/dev/null; then
+    echo "Downloading and installing Antigravity CLI (agy)..."
+    curl -fsSL https://antigravity.google/cli/install.sh | bash
+    if [ -f "$HOME/.local/bin/agy" ]; then
+        sudo cp -f "$HOME/.local/bin/agy" /usr/local/bin/agy
+        sudo chmod 755 /usr/local/bin/agy
+    fi
+else
+    echo "Antigravity CLI is already installed: $(agy --version 2>/dev/null || true)"
+fi
 
 # Verify installation
-INSTALLED_AGY_VERSION="$(agy --version || true)"
+INSTALLED_AGY_VERSION="$(agy --version 2>/dev/null || true)"
 echo "Installed agy version: ${INSTALLED_AGY_VERSION}"
 
 # 4. Configure runner user environment variables and bashrc
@@ -51,7 +58,7 @@ RUNNER_BASHRC="${RUNNER_HOME}/.bashrc"
 
 echo "Configuring environment variables for ${RUNNER_USER}..."
 
-# Export AGY_CLI_DISABLE_AUTO_UPDATE to prevent unwanted updates
+# Export AGY_CLI_DISABLE_AUTO_UPDATE to prevent unwanted auto-updates during runs
 if ! grep -q "AGY_CLI_DISABLE_AUTO_UPDATE" "${RUNNER_BASHRC}"; then
     echo "export AGY_CLI_DISABLE_AUTO_UPDATE=${AGY_CLI_DISABLE_AUTO_UPDATE}" >> "${RUNNER_BASHRC}"
 fi

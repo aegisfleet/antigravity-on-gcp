@@ -39,6 +39,22 @@ def load_env_file(env_path: Path) -> Dict[str, str]:
     return config
 
 
+def fetch_runner_token(repo: str) -> Optional[str]:
+    """Attempt to fetch GitHub Actions runner registration token via GitHub CLI (gh)."""
+    gh_bin = shutil.which("gh")
+    if not gh_bin:
+        return None
+    try:
+        cmd = [gh_bin, "api", "--method", "POST", f"repos/{repo}/actions/runners/registration-token", "--jq", ".token"]
+        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        token = res.stdout.strip()
+        if token and len(token) > 10:
+            return token
+    except Exception:
+        pass
+    return None
+
+
 def get_config() -> Dict[str, str]:
     """Load configuration from .env or fallback to .env.example / defaults."""
     env_file = BASE_DIR / ".env"
@@ -160,11 +176,14 @@ def cmd_setup(cfg: Dict[str, str]) -> None:
     if settings_template.exists():
         gcp_ssh.scp_to_vm(str(settings_template), "/tmp/settings.json", instance, project, zone, recurse=False)
 
-    gcp_ssh.ssh_command(instance, project, zone, command="chmod +x /tmp/vm-scripts/vm/*.sh")
+    gcp_ssh.ssh_command(instance, project, zone, command="chmod +x /tmp/vm-scripts/*.sh /tmp/vm-scripts/vm/*.sh 2>/dev/null || true")
+
+    # Helper script locator on remote VM
+    find_script = 'f="/tmp/vm-scripts/$1"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/$1"'
 
     # 3. Phase 0 Gate Check: CPU instructions
     print("\n[*] Executing [00] CPU Gate Check (PCLMULQDQ)...")
-    res = gcp_ssh.ssh_command(instance, project, zone, command="bash /tmp/vm-scripts/vm/00-check-cpu.sh", check=False)
+    res = gcp_ssh.ssh_command(instance, project, zone, command='script=$(f="/tmp/vm-scripts/00-check-cpu.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/00-check-cpu.sh"); bash "$script"', check=False)
     if res.returncode != 0:
         print("[RED] CPU instruction check failed! Antigravity CLI may crash on this CPU.")
         print("Please check output above. Setup aborted.")
@@ -173,7 +192,7 @@ def cmd_setup(cfg: Dict[str, str]) -> None:
     # 4. OS & Swap setup
     print("\n[*] Executing [01] OS setup & swap...")
     env_vars = f"SWAP_SIZE_GB={cfg.get('SWAP_SIZE_GB', '2')}"
-    gcp_ssh.ssh_command(instance, project, zone, command=f"{env_vars} bash /tmp/vm-scripts/vm/01-setup-os.sh")
+    gcp_ssh.ssh_command(instance, project, zone, command=f'{env_vars} bash $(f="/tmp/vm-scripts/01-setup-os.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/01-setup-os.sh")')
 
     # 5. Node.js & agy setup
     print(f"\n[*] Executing [02] Node.js & Antigravity CLI ({cfg.get('AGY_VERSION', '1.4.10')})...")
@@ -182,16 +201,16 @@ def cmd_setup(cfg: Dict[str, str]) -> None:
         f"AGY_VERSION={cfg.get('AGY_VERSION', '1.4.10')} "
         f"AGY_CLI_DISABLE_AUTO_UPDATE={cfg.get('AGY_CLI_DISABLE_AUTO_UPDATE', 'true')}"
     )
-    gcp_ssh.ssh_command(instance, project, zone, command=f"{agy_env} bash /tmp/vm-scripts/vm/02-setup-node-agy.sh")
+    gcp_ssh.ssh_command(instance, project, zone, command=f'{agy_env} bash $(f="/tmp/vm-scripts/02-setup-node-agy.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/02-setup-node-agy.sh")')
 
     # 6. GitHub CLI setup
     print("\n[*] Executing [03] GitHub CLI installation...")
-    gcp_ssh.ssh_command(instance, project, zone, command="bash /tmp/vm-scripts/vm/03-setup-gh.sh")
+    gcp_ssh.ssh_command(instance, project, zone, command='bash $(f="/tmp/vm-scripts/03-setup-gh.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/03-setup-gh.sh")')
 
     # 7. Maintenance cron setup
     print("\n[*] Executing [05] Automated maintenance cleanup cron...")
     maint_env = f"RUNNER_USER={cfg.get('RUNNER_USER', 'runner')}"
-    gcp_ssh.ssh_command(instance, project, zone, command=f"{maint_env} bash /tmp/vm-scripts/vm/05-setup-maintenance.sh")
+    gcp_ssh.ssh_command(instance, project, zone, command=f'{maint_env} bash $(f="/tmp/vm-scripts/05-setup-maintenance.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/05-setup-maintenance.sh")')
 
     # 8. GitHub Actions Runner setup (Interactive token input per repo)
     print("\n=== [04] GitHub Actions Runner Setup ===")
@@ -206,14 +225,20 @@ def cmd_setup(cfg: Dict[str, str]) -> None:
         for repo in target_repos:
             print("\n------------------------------------------------------------")
             print(f"Setting up runner for: {repo}")
-            print("Please retrieve a runner registration token from:")
-            print(f"  https://github.com/{repo}/settings/actions/runners/new")
-            token = input(f"Enter registration token for {repo} (leave blank to skip): ").strip()
+            token = fetch_runner_token(repo)
+            if token:
+                print(f"[OK] Automatically fetched registration token via GitHub CLI (gh).")
+            else:
+                print("[!] Could not fetch token automatically via gh CLI.")
+                print("Please retrieve a runner registration token from:")
+                print(f"  https://github.com/{repo}/settings/actions/runners/new")
+                token = input(f"Enter registration token for {repo} (leave blank to skip): ").strip()
+
             if not token:
                 print(f"[!] Skipped runner registration for {repo}.")
                 continue
 
-            runner_cmd = f"sudo bash /tmp/vm-scripts/vm/04-setup-runner.sh '{repo}' '{token}'"
+            runner_cmd = f"sudo bash $(f='/tmp/vm-scripts/04-setup-runner.sh'; [ -f \"$f\" ] && echo \"$f\" || echo '/tmp/vm-scripts/vm/04-setup-runner.sh') '{repo}' '{token}'"
             gcp_ssh.ssh_command(instance, project, zone, command=runner_cmd)
 
     # 9. Prompt for agy initial login

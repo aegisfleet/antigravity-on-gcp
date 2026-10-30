@@ -130,7 +130,7 @@ GCP_PROJECT_ID=cloud-execution-environment
 GCP_REGION=us-west1
 GCP_ZONE=us-west1-b
 GCP_INSTANCE_NAME=agy-runner-vm
-TARGET_REPOS=aegisfleet/tool-survey-report,aegisfleet/amazon-product-article
+TARGET_REPOS=your-org/your-repo1,your-org/your-repo2
 ```
 
 ### 2. 管理コンソールの起動
