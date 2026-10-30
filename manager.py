@@ -241,37 +241,29 @@ def cmd_setup(cfg: Dict[str, str]) -> None:
             runner_cmd = f"sudo bash $(f='/tmp/vm-scripts/04-setup-runner.sh'; [ -f \"$f\" ] && echo \"$f\" || echo '/tmp/vm-scripts/vm/04-setup-runner.sh') '{repo}' '{token}'"
             gcp_ssh.ssh_command(instance, project, zone, command=runner_cmd)
 
-    # 9. Prompt for agy initial login
+    # 9. Next Steps Guidance
     print("\n============================================================")
     print("Base setup completed successfully!")
-    print("Next step is Antigravity CLI (agy) OAuth authentication.")
+    print("All GitHub Actions runner services are online and active.")
     print("============================================================")
-    ans = input("Do you want to start 'agy login' interactive session now? [Y/n]: ").strip().lower()
-    if ans in ("", "y", "yes"):
-        cmd_login_agy(cfg)
+    print("Next step: Manual Authentication on VM (agy & gh)")
+    print("Run the following commands:")
+    print("  1) python manager.py ssh")
+    print("  2) sudo -i -u runner")
+    print("  3) agy               # Select 1. Google OAuth (approve via browser)")
+    print("  4) gh auth login     # OAuth (Web browser) or PAT")
+    print("============================================================")
 
 
 def cmd_login_agy(cfg: Dict[str, str]) -> None:
-    """Launch interactive agy session on the VM for sign in."""
-    print("=== Launching agy on VM for sign-in ===")
-    print("Notice: Antigravity CLI does not use a 'login' subcommand.")
-    print("Launching 'agy' without arguments triggers the Google OAuth sign-in flow.")
-    print("Open the URL shown in your browser, approve, and paste the code if prompted.\n")
-    instance = cfg["GCP_INSTANCE_NAME"]
-    project = cfg["GCP_PROJECT_ID"]
-    zone = cfg["GCP_ZONE"]
-    runner_user = cfg.get("RUNNER_USER", "runner")
-
-    # Launch agy without arguments as runner user with pseudo-terminal (-t)
-    login_cmd = f"sudo -i -u {runner_user} agy"
-    try:
-        gcp_ssh.ssh_command(instance, project, zone, command=login_cmd, interactive=True, check=False)
-    except Exception as e:
-        print(f"[!] Session ended or interrupted: {e}")
-
-    print("\n[*] Checking authentication status with 'agy models'...")
-    check_cmd = f"sudo -i -u {runner_user} agy models"
-    gcp_ssh.ssh_command(instance, project, zone, command=check_cmd, check=False)
+    """Guide and launch SSH session for interactive authentication."""
+    print("=== Manual Authentication Guide ===")
+    print("Due to Windows raw terminal handling, please run the following inside the VM shell:")
+    print("  sudo -i -u runner")
+    print("  agy               # Select 1. Google OAuth")
+    print("  gh auth login     # Authenticate GitHub CLI")
+    print("===================================\n")
+    cmd_ssh(cfg)
 
 
 def cmd_ssh(cfg: Dict[str, str]) -> None:
@@ -296,8 +288,8 @@ def interactive_menu(cfg: Dict[str, str]) -> None:
         print("--------------------------------------------------")
         print("1) Provision VM (e2-micro Always Free)")
         print("2) Run Full Setup (OS, Swap, Node, agy, Runners)")
-        print("3) Authenticate agy (Interactive OAuth Login)")
-        print("4) Connect via SSH (IAP Tunnel)")
+        print("3) Connect via SSH for Auth (agy & gh setup)")
+        print("4) Connect via SSH (General IAP Tunnel)")
         print("5) Check Status (VM & runner services)")
         print("6) Start VM")
         print("7) Stop VM")

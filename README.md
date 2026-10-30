@@ -180,25 +180,59 @@ Select an option [1-8 / q]:
    - 設定された各対象リポジトリ（`tool-survey-report`, `amazon-product-article` 等）の登録トークンを画面上で対話入力。
    - `actions-runner` をダウンロード、設定、systemd サービスとして自動起動。
 
-#### Step 3: Antigravity CLI 初回認証 (OAuth)
-セットアップの最後、またはメニュー `3`（`python manager.py login-agy`）を実行。
-1. VM 上で `sudo -i -u runner agy`（引数なし）が対話実行される（agy は引数なしで起動するとサインインフローが始まります）。
-2. 画面に表示される Google 認証用 URL をブラウザで開き、認証コードを入力して承認。
-3. `agy models` または `agy -p "Hello"` で疎通を確認。
+#### Step 3: VM に SSH 接続し、手動で初回認証を設定（agy & gh）
 
-#### Step 4: PR 作成用 PAT の設定（gh auth）
-VM に SSH 接続（メニュー `4` または `python manager.py ssh`）し、runner ユーザーで本人の fine-grained PAT を設定します。
+ターミナルキー入力（矢印キーや Enter）の制御を安定させるため、SSH 接続後に VM 上で手動認証を行います。
 
-```bash
-sudo -i -u runner
-# PAT を使って GitHub CLI にログイン (Contents / Pull requests 権限が必要)
-echo "<YOUR_FINE_GRAINED_PAT>" | gh auth login --with-token
-gh auth status
-```
+1. **VM に SSH 接続する**:
+   ```powershell
+   python manager.py ssh
+   ```
 
-> [!IMPORTANT]
-> **なぜ GITHUB_TOKEN ではなく個人の PAT なのか？**
-> `GITHUB_TOKEN` で作成した PR は、再帰防止仕様により `pull_request` トリガーの自動マージワークフロー（`pr-auto-merge` 等）を起動しません。Jules の代替として完全自動化を実現するために、VM 上の `gh` にのみ個人の fine-grained PAT を保持させます。
+2. **runner 専用ユーザーに切り替える**:
+   ```bash
+   sudo -i -u runner
+   ```
+
+3. **Antigravity CLI (agy) の Google OAuth サインイン**:
+   `agy` を引数なしで起動します。
+   ```bash
+   agy
+   ```
+   - キーボードの矢印キーで `1. Google OAuth` を選択し `Enter`。
+   - 画面に表示された URL をブラウザで開き、ワンタイムコードを入力して承認します。
+   - 承認完了後、動作確認を行います。
+     ```bash
+     agy models
+     ```
+
+4. **GitHub CLI (gh) の認証設定（PR 作成用）**:
+   PR 作成時に本人のアカウントで PR を発行するため、`gh` CLI にログインします。
+
+   - **方法 A: OAuth 認証（ブラウザ認証・手軽でおすすめ）**:
+     ```bash
+     gh auth login
+     ```
+     プロンプトに従い `GitHub.com` → `HTTPS` → `Yes`（Web browser）を選択し、表示されたワンタイムコード（8文字）をブラウザで入力して承認します。
+   
+   - **方法 B: fine-grained PAT 認証（権限を特定リポジトリのみに絞り込みたい場合）**:
+     ```bash
+     echo "<YOUR_FINE_GRAINED_PAT>" | gh auth login --with-token
+     ```
+     ※ PAT には対象リポジトリに対する `Contents` (R/W) および `Pull requests` (R/W) 権限が必要です。
+
+   - ログイン状態を確認します:
+     ```bash
+     gh auth status
+     exit  # runner ユーザーを抜ける
+     exit  # SSH セッションを終了
+     ```
+
+> [!NOTE]
+> **GitHub CLI の OAuth 認証と PAT の違いについて**:
+> - **OAuth 認証 (`gh auth login`)**: アカウントの全リポジトリへのアクセス権が付与されますが、ブラウザのコード承認だけで即座に設定できます。個人開発環境であればこちらで全く問題ありません。
+> - **Fine-grained PAT**: VM 侵害時の影響を「対象の2リポジトリのみ」「有効期限90日」に最小化できます。
+> - **重要**: どちらの認証方式でも、作成された PR は本人のアカウント名義（`github.actor == aegisfleet`）となるため、後続の自動マージワークフロー（`pr-auto-merge` 等）は問題なく発火します（`GITHUB_TOKEN` を使わなければ大丈夫です）。
 
 ---
 
