@@ -1,0 +1,7 @@
+# デフォルトでテキストファイルを自動検出して正規化
+* text=auto
+
+# シェルスクリプトおよび Python スクリプトは Linux 実行のため必ず LF に統一
+*.sh text eol=lf
+*.bash text eol=lf
+*.py text eol=lf
