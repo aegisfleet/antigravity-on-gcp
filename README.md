@@ -182,7 +182,7 @@ Select an option [1-8 / q]:
 
 #### Step 3: Antigravity CLI 初回認証 (OAuth)
 セットアップの最後、またはメニュー `3`（`python manager.py login-agy`）を実行。
-1. VM 上で `su - runner -c 'agy login'` が対話実行される。
+1. VM 上で `sudo -i -u runner agy`（引数なし）が対話実行される（agy は引数なしで起動するとサインインフローが始まります）。
 2. 画面に表示される Google 認証用 URL をブラウザで開き、認証コードを入力して承認。
 3. `agy models` または `agy -p "Hello"` で疎通を確認。
 

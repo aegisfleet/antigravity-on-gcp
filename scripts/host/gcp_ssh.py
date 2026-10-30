@@ -29,6 +29,9 @@ def ssh_command(
         "--tunnel-through-iap",
         "--strict-host-key-checking=no",
     ]
+    if interactive and command:
+        args.append("--ssh-flag=-t")
+
     if command:
         args.extend(["--command", command])
 

@@ -252,17 +252,26 @@ def cmd_setup(cfg: Dict[str, str]) -> None:
 
 
 def cmd_login_agy(cfg: Dict[str, str]) -> None:
-    """Launch interactive agy login on the VM."""
-    print("=== Launching agy login session on VM ===")
-    print("Follow the browser URL and enter the verification code provided by agy.")
+    """Launch interactive agy session on the VM for sign in."""
+    print("=== Launching agy on VM for sign-in ===")
+    print("Notice: Antigravity CLI does not use a 'login' subcommand.")
+    print("Launching 'agy' without arguments triggers the Google OAuth sign-in flow.")
+    print("Open the URL shown in your browser, approve, and paste the code if prompted.\n")
     instance = cfg["GCP_INSTANCE_NAME"]
     project = cfg["GCP_PROJECT_ID"]
     zone = cfg["GCP_ZONE"]
     runner_user = cfg.get("RUNNER_USER", "runner")
 
-    # Execute interactive agy login as runner user
-    login_cmd = f"sudo -i -u {runner_user} agy login"
-    gcp_ssh.ssh_command(instance, project, zone, command=login_cmd, interactive=True)
+    # Launch agy without arguments as runner user with pseudo-terminal (-t)
+    login_cmd = f"sudo -i -u {runner_user} agy"
+    try:
+        gcp_ssh.ssh_command(instance, project, zone, command=login_cmd, interactive=True, check=False)
+    except Exception as e:
+        print(f"[!] Session ended or interrupted: {e}")
+
+    print("\n[*] Checking authentication status with 'agy models'...")
+    check_cmd = f"sudo -i -u {runner_user} agy models"
+    gcp_ssh.ssh_command(instance, project, zone, command=check_cmd, check=False)
 
 
 def cmd_ssh(cfg: Dict[str, str]) -> None:
