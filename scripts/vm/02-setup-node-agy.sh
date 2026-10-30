@@ -59,13 +59,13 @@ RUNNER_BASHRC="${RUNNER_HOME}/.bashrc"
 echo "Configuring environment variables for ${RUNNER_USER}..."
 
 # Export AGY_CLI_DISABLE_AUTO_UPDATE to prevent unwanted auto-updates during runs
-if ! grep -q "AGY_CLI_DISABLE_AUTO_UPDATE" "${RUNNER_BASHRC}"; then
-    echo "export AGY_CLI_DISABLE_AUTO_UPDATE=${AGY_CLI_DISABLE_AUTO_UPDATE}" >> "${RUNNER_BASHRC}"
+if ! sudo grep -q "AGY_CLI_DISABLE_AUTO_UPDATE" "${RUNNER_BASHRC}" 2>/dev/null; then
+    echo "export AGY_CLI_DISABLE_AUTO_UPDATE=${AGY_CLI_DISABLE_AUTO_UPDATE}" | sudo tee -a "${RUNNER_BASHRC}" > /dev/null
 fi
 
 # Dummy SSH_CONNECTION to enforce file-token OAuth flow
-if ! grep -q "SSH_CONNECTION" "${RUNNER_BASHRC}"; then
-    echo 'export SSH_CONNECTION="dummy 12345 127.0.0.1 22"' >> "${RUNNER_BASHRC}"
+if ! sudo grep -q "SSH_CONNECTION" "${RUNNER_BASHRC}" 2>/dev/null; then
+    echo 'export SSH_CONNECTION="dummy 12345 127.0.0.1 22"' | sudo tee -a "${RUNNER_BASHRC}" > /dev/null
 fi
 
 # Global environment

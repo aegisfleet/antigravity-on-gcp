@@ -192,7 +192,7 @@ def cmd_setup(cfg: Dict[str, str]) -> None:
     # 4. OS & Swap setup
     print("\n[*] Executing [01] OS setup & swap...")
     env_vars = f"SWAP_SIZE_GB={cfg.get('SWAP_SIZE_GB', '2')}"
-    gcp_ssh.ssh_command(instance, project, zone, command=f'{env_vars} bash $(f="/tmp/vm-scripts/01-setup-os.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/01-setup-os.sh")')
+    gcp_ssh.ssh_command(instance, project, zone, command=f'{env_vars} sudo -E bash $(f="/tmp/vm-scripts/01-setup-os.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/01-setup-os.sh")')
 
     # 5. Node.js & agy setup
     print(f"\n[*] Executing [02] Node.js & Antigravity CLI ({cfg.get('AGY_VERSION', '1.4.10')})...")
@@ -201,16 +201,16 @@ def cmd_setup(cfg: Dict[str, str]) -> None:
         f"AGY_VERSION={cfg.get('AGY_VERSION', '1.4.10')} "
         f"AGY_CLI_DISABLE_AUTO_UPDATE={cfg.get('AGY_CLI_DISABLE_AUTO_UPDATE', 'true')}"
     )
-    gcp_ssh.ssh_command(instance, project, zone, command=f'{agy_env} bash $(f="/tmp/vm-scripts/02-setup-node-agy.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/02-setup-node-agy.sh")')
+    gcp_ssh.ssh_command(instance, project, zone, command=f'{agy_env} sudo -E bash $(f="/tmp/vm-scripts/02-setup-node-agy.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/02-setup-node-agy.sh")')
 
     # 6. GitHub CLI setup
     print("\n[*] Executing [03] GitHub CLI installation...")
-    gcp_ssh.ssh_command(instance, project, zone, command='bash $(f="/tmp/vm-scripts/03-setup-gh.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/03-setup-gh.sh")')
+    gcp_ssh.ssh_command(instance, project, zone, command='sudo -E bash $(f="/tmp/vm-scripts/03-setup-gh.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/03-setup-gh.sh")')
 
     # 7. Maintenance cron setup
     print("\n[*] Executing [05] Automated maintenance cleanup cron...")
     maint_env = f"RUNNER_USER={cfg.get('RUNNER_USER', 'runner')}"
-    gcp_ssh.ssh_command(instance, project, zone, command=f'{maint_env} bash $(f="/tmp/vm-scripts/05-setup-maintenance.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/05-setup-maintenance.sh")')
+    gcp_ssh.ssh_command(instance, project, zone, command=f'{maint_env} sudo -E bash $(f="/tmp/vm-scripts/05-setup-maintenance.sh"; [ -f "$f" ] && echo "$f" || echo "/tmp/vm-scripts/vm/05-setup-maintenance.sh")')
 
     # 8. GitHub Actions Runner setup (Interactive token input per repo)
     print("\n=== [04] GitHub Actions Runner Setup ===")
